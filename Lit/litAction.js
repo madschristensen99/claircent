@@ -1,20 +1,40 @@
+/**
+ * @fileoverview Lit Action script for handling AI API calls and blockchain interactions
+ * @requires ethers
+ * @requires @lit-protocol/lit-node-client
+ */
 
 (async () => {
+  /**
+   * Main execution function that handles AI API calls and blockchain interactions
+   * @async
+   * @returns {Promise<Object>} The AI response object
+   */
   const go = async () => {
     console.log('Incoming messagesRoles:', JSON.stringify(messagesRoles, null, 2));
-    // Extract all messages from messagesRoles and format for Anthropic
+    
+    /**
+     * Transform messagesRoles array into format required by Anthropic API
+     * @type {Array<{role: string, content: string}>}
+     */
     const messages = messagesRoles.map(([role, content]) => ({
       role: role.toLowerCase(),
       content: content[0][1]  // Assuming the content is always in this format
     }));
 
+    // Network configuration
     const FHENIX_RPC_URL = "https://sepolia-rpc.scroll.io";
     const mnemonic = "";
     const provider = new ethers.providers.JsonRpcProvider(FHENIX_RPC_URL);
     const signer = ethers.Wallet.fromMnemonic(mnemonic).connect(provider);
 
+    // Contract configuration
     const ORACLE_ADDRESS = "0x03d42AB95f54DEe5d3Ce7db984237b340f458988";
-    // TODO: add full ABI
+    
+    /**
+     * @type {Array<Object>} ABI for the Oracle contract
+     * Includes getMessagesAndRoles and addResponse function definitions
+     */
     const addResponseabi = [
       {
         "inputs": [
@@ -151,9 +171,15 @@
       }
     ];
 
-    // Make a call to AI API and contract call within the same runOnce
+    /**
+     * Execute the Lit Action with AI API call and contract interaction
+     * @returns {Promise<Object>} The result of the AI API call
+     */
     let result = await Lit.Actions.runOnce({ waitForResponse: true, name: "aiCallerAndContractCall" }, async () => {
-      // Anthropic API call TODO: configure api calls for other ais
+      /**
+       * Make API call to Anthropic's Claude API
+       * @type {Response}
+       */
       const response = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
         headers: {
@@ -171,21 +197,37 @@
         })
       });
       
+      /**
+       * @type {Object} The parsed AI response
+       */
       const aiResponse = await response.json();
       console.log('AI Response:', aiResponse);
 
-      // Contract call
+      /**
+       * Initialize contract instance for blockchain interaction
+       * @type {ethers.Contract}
+       */
       const contractCaller = new ethers.Contract(ORACLE_ADDRESS, addResponseabi, signer);
+      
+      /**
+       * Convert prompt IDs to proper number format
+       * @type {number}
+       */
       let id = promptId.toNumber ? promptId.toNumber() : parseInt(promptId.hex, 16);
       let callbackId = promptCallbackId.toNumber ? promptCallbackId.toNumber() : parseInt(promptCallbackId.hex, 16);
 
-       // TODO: get prompttype and execute based on prompt type
-       //let promptType = await contractCaller.promptType(callbackId);
-       // "Groq" "default" or "OpenAi"
-       // default is just addResponse as it is already implemented
-       // OpenAi: addOpenAiResponse(promptId, promptCallbackId, ["chatcmpl-123xyz789", "This is a sample response content", "", "", 1699084800, "gpt-4", "fp_12345", "chat.completion", 42, 15, 57], "")
-       // Groq: addGroqResponse (same but tuple is ["groq-123xyz789", "This is a sample Groq API response", 1699084800, "mixtral-8x7b", "fp_groq_12345", "chat.completion", 42, 15, 57], "")
+      // TODO: get prompttype and execute based on prompt type
+      // let promptType = await contractCaller.promptType(callbackId);
+      // "Groq" "default" or "OpenAi"
+      // default is just addResponse as it is already implemented
+      // OpenAi: addOpenAiResponse(promptId, promptCallbackId, ["chatcmpl-123xyz789", "This is a sample response content", "", "", 1699084800, "gpt-4", "fp_12345", "chat.completion", 42, 15, 57], "")
+      // Groq: addGroqResponse (same but tuple is ["groq-123xyz789", "This is a sample Groq API response", 1699084800, "mixtral-8x7b", "fp_groq_12345", "chat.completion", 42, 15, 57], "")
+      
       try {
+        /**
+         * Call the contract's addResponse function with AI response data
+         * @throws {Error} If the contract call fails
+         */
         await contractCaller.addResponse(id, callbackId, {
             id: aiResponse.id,
             content: aiResponse.content[0].text,
@@ -214,9 +256,7 @@
     return result;
   };
 
-  // Run the async function
+  // Execute the main function and set the response
   const result = await go();
-  
-  // Set the response from the action
   Lit.Actions.setResponse({ response: result });
 })();
