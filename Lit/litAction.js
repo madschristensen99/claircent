@@ -1,6 +1,6 @@
 /**
  * @fileoverview Lit Action script for handling AI API calls and blockchain interactions
- * @requires ethers
+ * @requires uses ethers, however not necessary to import as lit protocol has it built in
  * @requires @lit-protocol/lit-node-client
  */
 
