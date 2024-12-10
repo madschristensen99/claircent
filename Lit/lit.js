@@ -1,3 +1,12 @@
+/**
+ * @fileoverview LitNode Event Listener implementation for processing PromptAdded events
+ * and executing Lit Actions based on blockchain events.
+ * @requires @lit-protocol/lit-node-client
+ * @requires @lit-protocol/constants
+ * @requires @lit-protocol/auth-helpers
+ * @requires ethers
+ * @requires dotenv
+ */
 
 const { LitNodeClient } = require("@lit-protocol/lit-node-client");
 const { LIT_RPC, LitNetwork } = require("@lit-protocol/constants");
@@ -15,12 +24,22 @@ require("dotenv").config();
 
 const { FHENIX_RPC_URL, ORACLE_ADDRESS, ORACLE_ABI } = require('./constants');
 
-// Global state management
+/** @type {Object} Current session signatures */
 let currentSessionSigs = null;
+/** @type {number} Timestamp when current session expires */
 let sessionExpirationTime = null;
+/** @type {number} Time in milliseconds before expiration to renew session */
 const SESSION_RENEWAL_THRESHOLD = 10 * 60 * 1000; // 10 minutes before expiration
+/** @type {boolean} Flag indicating if the system is initialized */
 let isInitialized = false;
 
+/**
+ * Generates new session signatures for Lit Protocol interactions
+ * @param {LitNodeClient} litNodeClient - The initialized Lit Protocol client
+ * @param {HDNodeWallet} ethersSigner - Ethereum signer for authentication
+ * @returns {Promise<Object>} Session signatures object
+ * @throws {Error} When signature generation fails
+ */
 async function getNewSessionSigs(litNodeClient, ethersSigner) {
   console.log("Getting new session signatures...");
   const expiration = new Date(Date.now() + 1000 * 60 * 60 * 24).toISOString(); // 24 hours
@@ -57,6 +76,12 @@ async function getNewSessionSigs(litNodeClient, ethersSigner) {
   return sessionSigs;
 }
 
+/**
+ * Ensures a valid session exists, renewing if necessary
+ * @param {LitNodeClient} litNodeClient - The initialized Lit Protocol client
+ * @param {HDNodeWallet} ethersSigner - Ethereum signer for authentication
+ * @returns {Promise<Object>} Valid session signatures
+ */
 async function ensureValidSession(litNodeClient, ethersSigner) {
   const now = Date.now();
   if (!currentSessionSigs || !sessionExpirationTime || 
@@ -66,6 +91,14 @@ async function ensureValidSession(litNodeClient, ethersSigner) {
   return currentSessionSigs;
 }
 
+/**
+ * Processes a PromptAdded event by executing a Lit Action
+ * @param {Object} event - The blockchain event object
+ * @param {Array} messagesRoles - Array of messages and roles for processing
+ * @param {LitNodeClient} litNodeClient - The initialized Lit Protocol client
+ * @param {HDNodeWallet} ethersSigner - Ethereum signer for authentication
+ * @throws {Error} When Lit Action execution fails
+ */
 async function processPromptAddedEvent(event, messagesRoles, litNodeClient, ethersSigner) {
   console.log("New PromptAdded event detected!");
   console.log(`Prompt ID: ${event.args.promptId}`);
@@ -104,6 +137,14 @@ async function processPromptAddedEvent(event, messagesRoles, litNodeClient, ethe
   }
 }
 
+/**
+ * Initializes and starts the blockchain event listener
+ * @param {ethers.Contract} contract - The initialized contract instance
+ * @param {ethers.providers.Provider} provider - The blockchain provider
+ * @param {LitNodeClient} litNodeClient - The initialized Lit Protocol client
+ * @param {HDNodeWallet} ethersSigner - Ethereum signer for authentication
+ * @returns {Promise<void>}
+ */
 async function startEventListener(contract, provider, litNodeClient, ethersSigner) {
   console.log("Starting event listener...");
   const latestBlock = await provider.getBlockNumber();
@@ -136,6 +177,11 @@ async function startEventListener(contract, provider, litNodeClient, ethersSigne
   console.log("Event listener is now active and waiting for new PromptAdded events...");
 }
 
+/**
+ * Initializes the entire system, setting up connections and starting the event listener
+ * @throws {Error} When initialization fails or required environment variables are missing
+ * @returns {Promise<void>}
+ */
 async function initialize() {
   if (isInitialized) {
     console.log("Already initialized, skipping...");
