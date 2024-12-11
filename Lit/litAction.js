@@ -35,7 +35,7 @@
      * @type {Array<Object>} ABI for the Oracle contract
      * Includes getMessagesAndRoles and addResponse function definitions
      */
-    const addResponseabi = [
+    const ADD_RESPONSE_ABI = [
       {
         "inputs": [
           {
@@ -188,7 +188,7 @@
           'anthropic-version': '2023-06-01'
         },
         body: JSON.stringify({
-          model: "claude-3-sonnet-20240229",
+          model: "claude-3-sonnet-20240620",
           max_tokens: 1000,
           messages: messages.map(msg => ({
             role: msg.role === 'assistant' ? 'assistant' : 'user',
@@ -207,7 +207,7 @@
        * Initialize contract instance for blockchain interaction
        * @type {ethers.Contract}
        */
-      const contractCaller = new ethers.Contract(ORACLE_ADDRESS, addResponseabi, signer);
+      const contractCaller = new ethers.Contract(ORACLE_ADDRESS, ADD_RESPONSE_ABI, signer);
       
       /**
        * Convert prompt IDs to proper number format
